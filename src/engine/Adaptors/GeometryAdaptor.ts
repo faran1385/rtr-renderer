@@ -10,7 +10,6 @@ import type {GeometryBindingPlan} from "../producers/BindGroupLayoutProducer.ts"
 import {schedulePreFrame} from "./PreFrameQueue.ts";
 import {Source} from "./Source.ts";
 import type {GeometryWrapper} from "../wrappers/GeometryWrapper.ts";
-import {VATTextureWrapper} from "../wrappers/VATTextureWrapper.ts";
 
 /**
  * Translates a GeometryWrapper (attributes keyed by name) into a GeometryInternal (vertex buffers keyed by slot, plus
@@ -43,7 +42,6 @@ export class GeometryAdaptor {
     private layoutVersion = 0;
     private drawKey = "";
     private readonly attributes = new Map<string, AttributeInternal>();
-    private sortedVats: [string, VATTextureWrapper][] = [];
 
     constructor(owner: GeometryWrapper) {
         this.owner = owner;
@@ -66,9 +64,7 @@ export class GeometryAdaptor {
         schedulePreFrame(this.task);
     }
 
-    private sortVat() {
-        this.sortedVats = Array.from(this.owner.getVATs()).sort((a, b) => a[0].localeCompare(b[0]));
-    }
+
 
     /** Index-buffer changes affect the draw command, not the vertex attribute plan. */
     invalidateIndices(): void {
@@ -87,7 +83,6 @@ export class GeometryAdaptor {
 
     /** A VAT has been added or removed */
     invalidateVATs(): void {
-        this.sortVat();
         this.markDirty();
         this.vatDirty = true;
         schedulePreFrame(this.task);
@@ -158,7 +153,7 @@ export class GeometryAdaptor {
         }
 
         if (syncMorphTarget || vat) {
-            this.geometryBindingPlan = planGeometryBindings(this.owner.getMorphTarget(), this.sortedVats);
+            this.geometryBindingPlan = planGeometryBindings(this.owner.getMorphTarget(), this.owner.getVATs());
             this.syncBindings();
         }
 
@@ -261,8 +256,13 @@ export class GeometryAdaptor {
     }
 
     private updateLayoutVersion(): void {
-        const layoutKey = this.attributePlan.slots.map((s) => `${s.name}:${s.slot}:${s.format}:${s.arrayStride}`).join("|")
-            + `#${morphPlanKey(this.morphPlan)}#${this.sortedVats.map(i => i[0]).join("|")}`;
+        const layoutKey =
+            this.attributePlan.slots
+                .map(s => `${s.name}:${s.slot}:${s.format}:${s.arrayStride}`)
+                .join("|")
+            + `#${morphPlanKey(this.morphPlan)}`
+            + `#${this.geometryBindingPlan.signature}`;
+
         if (layoutKey !== this.layoutKey) {
             this.layoutKey = layoutKey;
             this.layoutVersion++;

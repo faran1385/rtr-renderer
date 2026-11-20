@@ -218,7 +218,7 @@ export function planGeometryAttributes(geometry: GeometryWrapper): GeometryAttri
  * Allocates geometry-owned optional resources in a stable order. Keep feature-specific WGSL declarations
  * and adaptor bindings driven by this result rather than duplicating binding numbers.
  */
-export function planGeometryBindings(morphTarget: MorphTargetWrapper | undefined, vats: [string, VATTextureWrapper][]): GeometryBindingPlan {
+export function planGeometryBindings(morphTarget: MorphTargetWrapper | undefined, vats: ReadonlyMap<string, VATTextureWrapper>): GeometryBindingPlan {
     let binding = 0;
 
     const plan: GeometryBindingPlan = {
